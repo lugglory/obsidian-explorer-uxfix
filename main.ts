@@ -1,13 +1,13 @@
 import { App, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TAbstractFile, TFile, TFolder, getIcon, moment, normalizePath } from "obsidian";
 
-const GAUGE_DELAY = 120; // 꾹 누르기 게이지를 띄우기까지 ms(짧은 클릭에는 안 보이게)
-const MOVE_SLOP = 4;     // 이만큼 넘게 움직이면 꾹 누르기가 아니다(끌어서 옮기기)
+const GAUGE_DELAY = 120; // 길게 누르기 게이지를 띄우기까지 ms(짧은 클릭에는 안 보이게)
+const MOVE_SLOP = 4;     // 누르는 동안 이 픽셀 수보다 많이 움직이면 길게 누르기가 아니다(끌어서 옮기기)
 const TITLE = ".nav-file-title, .nav-folder-title";
 const EXPLORER = '.workspace-leaf-content[data-type="file-explorer"]';
 const BAD_CHARS = /[\\/:*?"<>|]/; // 파일 이름에 쓸 수 없는 글자(Windows 기준, 다른 OS에서도 Obsidian이 막는다)
 
 interface Settings {
-	longPressMs: number; // 꾹 누르기로 치는 시간(ms)
+	longPressMs: number; // 길게 누르기로 치는 시간(ms)
 	previewGap: number;  // 탐색기 가장자리와 미리보기 사이 간격(px)
 }
 
@@ -26,8 +26,8 @@ const STRINGS = {
 		exists: "Something with that name is already there.",
 	},
 	ko: {
-		longPressMs: ["꾹 누르기 시간", "파일 탐색기에서 파일이나 폴더를 이만큼(밀리초) 누르고 있으면 이름 입력 칸으로 바뀐다."],
-		previewGap: ["미리보기 간격", "파일 탐색기에서 띄운 페이지 미리보기와 탐색기 사이를 이만큼(픽셀) 띄운다."],
+		longPressMs: ["길게 누르기 시간", "파일 탐색기에서 파일이나 폴더를 누르고 있으면 이름 입력 칸으로 바뀌기까지 걸리는 시간(밀리초)."],
+		previewGap: ["미리보기 간격", "파일 탐색기와 거기서 띄운 페이지 미리보기 사이의 간격(픽셀)."],
 		badChars: "이름에는 다음 글자를 쓸 수 없다: \\ / : * ? \" < > |",
 		exists: "같은 이름이 이미 있다.",
 	},
@@ -36,11 +36,11 @@ const t = () => moment.locale().startsWith("ko") ? STRINGS.ko : STRINGS.en;
 
 export default class ExplorerUxfixPlugin extends Plugin {
 	win: Window = window;            // 지금 누르고 있는 창(따로 띄운 창일 수 있다)
-	timer: number | null = null;     // 꾹 누르기
+	timer: number | null = null;     // 길게 누르기
 	cleanup: (() => void) | null = null; // 누르는 동안 건 리스너를 뗀다
 	gauge: HTMLElement | null = null;
 	gaugeTimer: number | null = null;
-	release: (() => void) | null = null; // 꾹 누르기 뒤 holdUntilRelease가 건 것을 푼다
+	release: (() => void) | null = null; // 길게 누르기 뒤 holdUntilRelease가 건 것을 푼다
 	closeRename: (() => void) | null = null; // 열려 있는 이름 입력 칸을 (바꾸지 않고) 닫는다
 
 	async onload() {
@@ -87,7 +87,7 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		this.startGauge(win, e.clientX, e.clientY);
 	};
 
-	// 누르는 동안: 움직이거나(끌어서 옮기기), 떼거나, 스크롤하거나, 창을 벗어나면 꾹 누르기로 치지 않는다
+	// 누르는 동안: 움직이거나(끌어서 옮기기), 떼거나, 스크롤하거나, 창을 벗어나면 길게 누르기로 치지 않는다
 	track(win: Window, e: MouseEvent) {
 		const x = e.clientX, y = e.clientY;
 		const onMove = (m: MouseEvent) => { if (Math.abs(m.clientX - x) > MOVE_SLOP || Math.abs(m.clientY - y) > MOVE_SLOP) this.cancel(); };
@@ -108,7 +108,7 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		this.stopGauge();
 	}
 
-	// 꾹 누르기가 된 뒤 손을 뗄 때까지: 끌어서 옮기기가 시작되지 않게 하고, 뗄 때의 클릭도 삼킨다
+	// 길게 누르기가 된 뒤 손을 뗄 때까지: 끌어서 옮기기가 시작되지 않게 하고, 뗄 때의 클릭도 삼킨다
 	// (파일이 열리거나 폴더가 접히고 펴지지 않게). 떼는 신호를 놓쳤어도 새로 누르면 바로 푼다
 	holdUntilRelease(win: Window) {
 		const stop = (ev: Event) => { ev.preventDefault(); ev.stopPropagation(); };
@@ -204,7 +204,7 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		}
 	}
 
-	// 꾹 누르는 동안 마우스 오른쪽 아래에 네모에 연필이 걸친 편집 아이콘을 그려 두고, 그 선을 왼쪽에서
+	// 길게 누르는 동안 마우스 오른쪽 아래에 네모에 연필이 걸친 편집 아이콘을 그려 두고, 그 선을 왼쪽에서
 	// 오른쪽으로 훑듯이 칠한다. 짧은 클릭에는 안 보이게 조금 뒤에 빈 채로 띄워 남은 시간 동안 채운다
 	startGauge(win: Window, x: number, y: number) {
 		this.gaugeTimer = win.setTimeout(() => {
