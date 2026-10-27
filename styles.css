@@ -15,7 +15,7 @@
 	visibility: hidden;
 }
 
-/* Long-press pencil that fills along its outline */
+/* Long-press edit icon (pencil over a square): its outline is colored left to right while holding */
 .explorer-uxfix-gauge {
 	position: fixed;
 	width: 16px;
@@ -25,12 +25,11 @@
 }
 
 .explorer-uxfix-gauge svg {
-	width: 100%;
-	height: 100%;
-	overflow: visible;
-}
-
-.explorer-uxfix-gauge svg > * {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 16px;
+	height: 16px;
 	fill: none;
 	stroke-width: 3;
 	stroke-linecap: round;
@@ -43,15 +42,24 @@
 
 .explorer-uxfix-gauge-bar {
 	stroke: var(--interactive-accent);
-	stroke-dasharray: 1;
+}
+
+/* Holds the accent icon and grows from the left edge rightward, revealing it */
+.explorer-uxfix-gauge-scan {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 100%;
+	overflow: hidden;
 	animation: explorer-uxfix-gauge-fill var(--explorer-uxfix-gauge-time) linear forwards;
 }
 
 @keyframes explorer-uxfix-gauge-fill {
 	from {
-		stroke-dashoffset: 1;
+		width: 0;
 	}
 	to {
-		stroke-dashoffset: 0;
+		width: 100%;
 	}
 }

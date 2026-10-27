@@ -10,8 +10,8 @@ interface Settings {
 	longPressMs: number; // 꾹 누르기로 치는 시간(ms)
 }
 
-const DEFAULT_SETTINGS: Settings = { longPressMs: 400 };
-const clampMs = (v: number) => Math.min(1000, Math.max(200, v));
+const DEFAULT_SETTINGS: Settings = { longPressMs: 800 };
+const clampMs = (v: number) => Math.min(1500, Math.max(300, v));
 
 // 이벤트 때마다 읽는다: 설정을 바꾸면 바로 적용된다
 const settings: Settings = { ...DEFAULT_SETTINGS };
@@ -194,12 +194,13 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		}
 	}
 
-	// 꾹 누르는 동안 마우스 오른쪽 아래에 연필 아이콘(Obsidian의 이름 바꾸기 아이콘)이 선을 따라 차오른다.
-	// 짧은 클릭에는 안 보이게 조금 뒤에 빈 채로 띄워 남은 시간 동안 채운다
+	// 꾹 누르는 동안 마우스 오른쪽 아래에 네모에 연필이 걸친 편집 아이콘을 그려 두고, 그 선을 왼쪽에서
+	// 오른쪽으로 훑듯이 칠한다. 짧은 클릭에는 안 보이게 조금 뒤에 빈 채로 띄워 남은 시간 동안 채운다
 	startGauge(win: Window, x: number, y: number) {
 		this.gaugeTimer = win.setTimeout(() => {
 			this.gaugeTimer = null;
-			const icon = getIcon("pencil");
+			// 네모 위에 연필(macOS의 square.and.pencil, Material의 edit_square와 같은 꼴). 옛 아이콘 묶음이면 연필만
+			const icon = getIcon("square-pen") ?? getIcon("pencil");
 			if (!icon) return;
 			// 모양과 차오르는 애니메이션은 styles.css. 여기서는 자리와 걸리는 시간을 넘긴다
 			const doc = win.document, ns = "http://www.w3.org/2000/svg";
@@ -210,18 +211,16 @@ export default class ExplorerUxfixPlugin extends Plugin {
 				top: `${y + 10}px`,
 				"--explorer-uxfix-gauge-time": `${settings.longPressMs - GAUGE_DELAY}ms`,
 			});
-			const svg = doc.createElementNS(ns, "svg");
-			svg.setAttribute("viewBox", icon.getAttribute("viewBox") ?? "0 0 24 24");
+			// 회색 연필 위에 강조색 연필을 겹치고, 강조색 쪽을 감싼 칸의 폭을 0에서 끝까지 늘려 왼쪽에서부터 드러낸다
 			const shapes = Array.from(icon.querySelectorAll("path, line, polyline, polygon, circle, rect"));
-			for (const cls of ["explorer-uxfix-gauge-track", "explorer-uxfix-gauge-bar"]) {
-				for (const shape of shapes) {
-					const copy = shape.cloneNode() as SVGElement;
-					copy.setAttribute("pathLength", "1");
-					copy.setAttribute("class", cls);
-					svg.appendChild(copy);
-				}
-			}
-			el.appendChild(svg);
+			const pencil = (parent: HTMLElement, cls: string) => {
+				const svg = parent.appendChild(doc.createElementNS(ns, "svg"));
+				svg.setAttribute("viewBox", icon.getAttribute("viewBox") ?? "0 0 24 24");
+				svg.setAttribute("class", cls);
+				for (const shape of shapes) svg.appendChild(shape.cloneNode());
+			};
+			pencil(el, "explorer-uxfix-gauge-track");
+			pencil(el.createDiv({ cls: "explorer-uxfix-gauge-scan" }), "explorer-uxfix-gauge-bar");
 			this.gauge = el;
 		}, GAUGE_DELAY);
 	}
@@ -238,7 +237,7 @@ class SettingTab extends PluginSettingTab {
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		const text = t();
 		return [
-			{ name: text.longPressMs[0], desc: text.longPressMs[1], control: { type: "slider", key: "longPressMs", min: 200, max: 1000, step: 50 } },
+			{ name: text.longPressMs[0], desc: text.longPressMs[1], control: { type: "slider", key: "longPressMs", min: 300, max: 1500, step: 50 } },
 		];
 	}
 
