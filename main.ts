@@ -1,4 +1,4 @@
-import { App, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TAbstractFile, TFile, TFolder, getIcon, moment, normalizePath } from "obsidian";
+import { App, Notice, Plugin, PluginSettingTab, Scope, SettingDefinitionItem, TAbstractFile, TFile, TFolder, getIcon, moment, normalizePath } from "obsidian";
 
 const GAUGE_DELAY = 120; // 길게 누르기 게이지를 띄우기까지 ms(짧은 클릭에는 안 보이게)
 const MOVE_SLOP = 4;     // 누르는 동안 이 픽셀 수보다 많이 움직이면 길게 누르기가 아니다(끌어서 옮기기)
@@ -157,18 +157,25 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		};
 		let frame: number | null = null;
 		const onScroll = () => { if (frame === null) frame = win.requestAnimationFrame(() => { frame = null; place(); }); };
-		const onKey = (e: KeyboardEvent) => {
+		// Obsidian은 키를 창에서 먼저 받아 탐색기 단축키(Enter면 폴더 접고 펴기)로 넘기므로,
+		// 입력 칸이 열려 있는 동안은 Enter와 Esc를 여기서 먼저 받는다
+		const scope = new Scope(this.app.scope);
+		scope.register([], "Enter", (e) => {
 			if (e.isComposing) return; // 한글 등을 조합하는 중의 Enter는 글자를 끝내는 것
-			if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-			else if (e.key === "Escape") { e.preventDefault(); close(); }
-			else return;
-			e.stopPropagation();
-		};
+			input.blur();
+			return false;
+		});
+		scope.register([], "Escape", (e) => {
+			if (e.isComposing) return;
+			close();
+			return false;
+		});
 		const close = () => {
 			if (frame !== null) win.cancelAnimationFrame(frame);
 			win.removeEventListener("scroll", onScroll, true);
 			win.removeEventListener("resize", onScroll);
 			input.removeEventListener("blur", commit);
+			this.app.keymap.popScope(scope);
 			input.remove();
 			this.closeRename = null;
 		};
@@ -179,8 +186,8 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		};
 		win.addEventListener("scroll", onScroll, true);
 		win.addEventListener("resize", onScroll);
-		input.addEventListener("keydown", onKey);
 		input.addEventListener("blur", commit);
+		this.app.keymap.pushScope(scope);
 		this.closeRename = close;
 		place();
 		input.focus();
