@@ -141,7 +141,8 @@ export default class ExplorerUxfixPlugin extends Plugin {
 			input.setCssProps({
 				left: `${r.left}px`,
 				top: `${r.top}px`,
-				width: `${Math.max(r.width, box.right - r.left - 8)}px`,
+				// 오른쪽 끝은 목록의 내용 영역까지(getBoundingClientRect는 스크롤바까지 넣는다)
+				width: `${Math.max(r.width, box.left + list.clientLeft + list.clientWidth - r.left - 8)}px`,
 				height: `${r.height}px`,
 			});
 		};
