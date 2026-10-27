@@ -63,3 +63,14 @@
 		width: 100%;
 	}
 }
+
+/* Page preview opened from the file explorer: moved beside the explorer so it doesn't cover it.
+   Only the horizontal position changes; Obsidian still sets the top and size */
+.hover-popover.explorer-uxfix-preview-right {
+	left: var(--explorer-uxfix-preview-x) !important;
+}
+
+.hover-popover.explorer-uxfix-preview-left {
+	left: auto !important;
+	right: var(--explorer-uxfix-preview-x) !important;
+}

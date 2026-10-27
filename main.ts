@@ -8,10 +8,12 @@ const BAD_CHARS = /[\\/:*?"<>|]/; // 파일 이름에 쓸 수 없는 글자(Wind
 
 interface Settings {
 	longPressMs: number; // 꾹 누르기로 치는 시간(ms)
+	previewGap: number;  // 탐색기 가장자리와 미리보기 사이 간격(px)
 }
 
-const DEFAULT_SETTINGS: Settings = { longPressMs: 800 };
+const DEFAULT_SETTINGS: Settings = { longPressMs: 800, previewGap: 8 };
 const clampMs = (v: number) => Math.min(1500, Math.max(300, v));
+const clampGap = (v: number) => Math.min(48, Math.max(0, Math.round(v)));
 
 // 이벤트 때마다 읽는다: 설정을 바꾸면 바로 적용된다
 const settings: Settings = { ...DEFAULT_SETTINGS };
@@ -19,11 +21,13 @@ const settings: Settings = { ...DEFAULT_SETTINGS };
 const STRINGS = {
 	en: {
 		longPressMs: ["Long-press time", "How long to hold a file or folder in the file explorer, in milliseconds, before it turns into a name field."],
+		previewGap: ["Preview gap", "Space in pixels between the file explorer and a page preview opened from it."],
 		badChars: "A name can't contain any of these characters: \\ / : * ? \" < > |",
 		exists: "Something with that name is already there.",
 	},
 	ko: {
 		longPressMs: ["꾹 누르기 시간", "파일 탐색기에서 파일이나 폴더를 이만큼(밀리초) 누르고 있으면 이름 입력 칸으로 바뀐다."],
+		previewGap: ["미리보기 간격", "파일 탐색기에서 띄운 페이지 미리보기와 탐색기 사이를 이만큼(픽셀) 띄운다."],
 		badChars: "이름에는 다음 글자를 쓸 수 없다: \\ / : * ? \" < > |",
 		exists: "같은 이름이 이미 있다.",
 	},
@@ -44,9 +48,14 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		const data: unknown = await this.loadData();
 		const saved = (typeof data === "object" && data !== null ? data : {}) as Partial<Record<keyof Settings, unknown>>;
 		if (typeof saved.longPressMs === "number") settings.longPressMs = clampMs(saved.longPressMs);
+		if (typeof saved.previewGap === "number") settings.previewGap = clampGap(saved.previewGap);
 		this.addSettingTab(new SettingTab(this.app, this));
 		this.registerDomEvent(document, "mousedown", this.onDown, true);
-		this.registerEvent(this.app.workspace.on("window-open", (_, win) => this.registerDomEvent(win.document, "mousedown", this.onDown, true)));
+		this.watchPreviews(document);
+		this.registerEvent(this.app.workspace.on("window-open", (_, win) => {
+			this.registerDomEvent(win.document, "mousedown", this.onDown, true);
+			this.watchPreviews(win.document);
+		}));
 	}
 
 	onunload() {
@@ -230,6 +239,36 @@ export default class ExplorerUxfixPlugin extends Plugin {
 		if (this.gaugeTimer !== null) { this.win.clearTimeout(this.gaugeTimer); this.gaugeTimer = null; }
 		if (this.gauge) { this.gauge.remove(); this.gauge = null; }
 	}
+
+	// 파일 탐색기에서 띄운 페이지 미리보기가 탐색기를 가리지 않게 탐색기 바로 옆으로 옮긴다.
+	// 미리보기 창에는 어디서 띄웠는지 표시가 없어서, 마우스가 마지막으로 올라간 곳이 탐색기 안이었는지로 가린다.
+	// 본문 링크에서 띄운 미리보기는 건드리지 않고, 세로 위치와 크기도 Obsidian에 맡긴다
+	watchPreviews(doc: Document) {
+		let explorer: HTMLElement | null = null;
+		this.registerDomEvent(doc, "mouseover", (e: MouseEvent) => {
+			explorer = (e.target as Element | null)?.closest<HTMLElement>(EXPLORER) ?? null;
+		}, { passive: true });
+		// 미리보기 창은 필요할 때 body 바로 아래에 붙는다
+		const observer = new MutationObserver((records) => {
+			if (!explorer) return;
+			for (const record of records) for (const node of Array.from(record.addedNodes))
+				if (node.instanceOf(HTMLElement) && node.hasClass("hover-popover")) this.placePreview(node, explorer);
+		});
+		observer.observe(doc.body, { childList: true });
+		this.register(() => observer.disconnect());
+	}
+
+	placePreview(popover: HTMLElement, explorer: HTMLElement) {
+		const r = explorer.getBoundingClientRect();
+		if (r.width === 0) return;
+		// 오른쪽 사이드바에 둔 탐색기면 왼쪽에 띄운다
+		const right = explorer.closest(".mod-right-split") !== null;
+		const win = explorer.win;
+		popover.setCssProps({
+			"--explorer-uxfix-preview-x": `${Math.round(right ? win.innerWidth - r.left + settings.previewGap : r.right + settings.previewGap)}px`,
+		});
+		popover.addClass(right ? "explorer-uxfix-preview-left" : "explorer-uxfix-preview-right");
+	}
 }
 
 class SettingTab extends PluginSettingTab {
@@ -239,6 +278,7 @@ class SettingTab extends PluginSettingTab {
 		const text = t();
 		return [
 			{ name: text.longPressMs[0], desc: text.longPressMs[1], control: { type: "slider", key: "longPressMs", min: 300, max: 1500, step: 50 } },
+			{ name: text.previewGap[0], desc: text.previewGap[1], control: { type: "slider", key: "previewGap", min: 0, max: 48, step: 1 } },
 		];
 	}
 
@@ -248,8 +288,10 @@ class SettingTab extends PluginSettingTab {
 	}
 
 	async setControlValue(key: string, value: unknown) {
-		if (key !== "longPressMs" || typeof value !== "number") return;
-		settings.longPressMs = clampMs(value);
+		if (typeof value !== "number") return;
+		if (key === "longPressMs") settings.longPressMs = clampMs(value);
+		else if (key === "previewGap") settings.previewGap = clampGap(value);
+		else return;
 		await this.plugin.saveSettings();
 	}
 }

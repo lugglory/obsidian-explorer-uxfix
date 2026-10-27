@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md)
 
-Long-press a file or folder in Obsidian's file explorer to rename it.
+Long-press a file or folder in Obsidian's file explorer to rename it, and keep page previews from covering the explorer.
 
 ## Features
 
@@ -14,6 +14,7 @@ Long-press a file or folder in Obsidian's file explorer to rename it.
 - Moving more than 4 px while pressing starts a normal drag (to move the item) instead. Scrolling or switching windows also cancels the press.
 - After a long-press, letting go doesn't open the file or fold the folder.
 - Clicks with Ctrl, Shift, Alt, or Cmd held, other mouse buttons, and the vault's top folder are left alone.
+- **Page previews opened from the file explorer appear beside it** instead of on top of it (8 px away by default, adjustable in the settings). If the explorer is in the right sidebar, they appear to its left. Only the horizontal position changes; previews of links in notes are left alone. Needs the core plugin "Page preview".
 - The settings are in English, or Korean when Obsidian is set to Korean.
 - Desktop only. Requires Obsidian 1.13 or later.
 

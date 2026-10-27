@@ -1,9 +1,9 @@
 {
   "id": "explorer-uxfix",
   "name": "Explorer UX Fix",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "minAppVersion": "1.13.0",
-  "description": "Long-press a file or folder in the file explorer to rename it.",
+  "description": "Long-press a file or folder in the file explorer to rename it, and keep page previews from covering the explorer.",
   "author": "Hyunyoung Park",
   "authorUrl": "https://github.com/lugglory",
   "isDesktopOnly": true

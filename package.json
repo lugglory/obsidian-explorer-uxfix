@@ -1,7 +1,7 @@
 {
   "name": "obsidian-explorer-uxfix",
-  "version": "0.1.1",
-  "description": "Long-press a file or folder in the file explorer to rename it",
+  "version": "0.2.0",
+  "description": "Long-press a file or folder in the file explorer to rename it, and keep page previews from covering the explorer",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
