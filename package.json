@@ -1,0 +1,22 @@
+{
+  "name": "obsidian-explorer-uxfix",
+  "version": "0.1.0",
+  "description": "Long-press a file or folder in the file explorer to rename it",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin"
+  ],
+  "author": "Hyunyoung Park",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "esbuild": "^0.28.1",
+    "obsidian": "^1.13.0",
+    "typescript": "^5.4.5"
+  }
+}

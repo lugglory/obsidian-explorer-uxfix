@@ -1,0 +1,10 @@
+{
+  "id": "explorer-uxfix",
+  "name": "Explorer UX Fix",
+  "version": "0.1.0",
+  "minAppVersion": "1.13.0",
+  "description": "Long-press a file or folder in the file explorer to rename it.",
+  "author": "Hyunyoung Park",
+  "authorUrl": "https://github.com/lugglory",
+  "isDesktopOnly": true
+}
